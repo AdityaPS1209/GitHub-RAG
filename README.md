@@ -1,15 +1,75 @@
 # RAG Knowledge Assistant
 
-A production-style Retrieval Augmented Generation (RAG) backend and frontend. 
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
+![React](https://img.shields.io/badge/React-Frontend-blue)
+![FAISS](https://img.shields.io/badge/VectorDB-FAISS-orange)
+![LLM](https://img.shields.io/badge/LLM-LLaMA3-purple)
 
-## Features
+A **full-stack Retrieval-Augmented Generation (RAG) system** that enables users to ingest GitHub repositories and ask natural language questions about the codebase.
+
+The system retrieves relevant code snippets using **semantic vector search** and generates context-aware answers using a **Large Language Model (LLaMA-3)** (via Groq/OpenAI/Ollama).
+
+This project demonstrates how to build a **production-style LLM application** combining modern AI infrastructure with scalable backend architecture.
+
+---
+
+## 🔥 Features
 - **User Authentication**: JWT-based login/registration.
 - **Repository Ingestion**: Scrapes and chunks GitHub repositories asynchronously using Celery.
 - **Vector Search**: Embeds tokens using `all-MiniLM-L6-v2` and searches via local FAISS.
-- **Chat Copilot**: Generates answers with context from your codebase using OpenAI or Ollama.
+- **Chat Copilot**: Generates answers with context from your codebase.
 - **Modern UI**: Dark-mode glassmorphism React interface.
 
-## Setup Instructions
+---
+
+## 🏗️ System Architecture
+
+```text
+                +------------------+
+                |     Frontend     |
+                | React + Vite UI  |
+                +--------+---------+
+                         |
+                         | REST API
+                         |
+                +--------v---------+
+                |      FastAPI     |
+                | Backend Services |
+                +--------+---------+
+                         |
+            +------------+-------------+
+            |                          |
+      +-----v-----+             +------v------+
+      |  MongoDB  |             |    Redis    |
+      | User Data |             |   Caching   |
+      +-----------+             +-------------+
+
+                         |
+                         |
+                 +-------v-------+
+                 |  Embeddings   |
+                 | SentenceTrans |
+                 +-------+-------+
+                         |
+                  Vector Storage
+                         |
+                 +-------v-------+
+                 |     FAISS     |
+                 | Vector Search |
+                 +-------+-------+
+                         |
+                 Context Retrieval
+                         |
+                 +-------v-------+
+                 |   LLaMA-3     |
+                 |  Groq API     |
+                 +---------------+
+```
+
+---
+
+## 🚀 Setup Instructions
 
 ### 1. Environment Variables
 Create a file named `.env` in the `backend/` directory with the following variables:
@@ -45,3 +105,38 @@ npm run dev
 ```
 
 Visit `http://localhost:5173` to access the application. Register an account, add a GitHub repository (like `https://github.com/tiangolo/fastapi`), wait for it to be processed by Celery, and then ask questions about it in the Chat copilot!
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+* React
+* TypeScript
+* Vite
+
+### Backend
+* FastAPI
+* Python
+* JWT Authentication
+* REST APIs
+
+### AI / Machine Learning
+* Sentence Transformers
+* FAISS Vector Database
+* Retrieval-Augmented Generation
+
+### Infrastructure
+* MongoDB
+* Redis
+* Groq API (LLaMA-3)
+
+---
+
+## 👨‍💻 Author
+
+**Aditya Pratap Singh**
+
+Machine Learning Engineer | AI Systems | Backend Development
+* YouTube: DataDissection
+* Focus Areas: AI Systems, Computer Vision, LLM Applications
