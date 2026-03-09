@@ -1,0 +1,122 @@
+=========================================================
+          RAG ASSISTANT - PROJECT ARCHITECTURE          
+=========================================================
+
+1. OVERVIEW
+-----------
+This project is a Retrieval-Augmented Generation (RAG) Knowledge Assistant. It allows users to ingest public GitHub repositories (and theoretically documents) into a vector database, and then ask an LLM (Large Language Model) questions about the codebase. 
+
+The application is split into two parts:
+- A React+Vite Frontend (TypeScript) for user interaction (Dashboard to ingest repos, Chat interface to ask questions).
+- A FastAPI Backend (Python) for handling authentication, scheduling ingestion jobs, chunking and embedding documents, querying the vector database, and communicating with the Groq API (LLaMa 3) to generate intelligent answers.
+
+2. CORE COMPONENTS
+------------------
+- **Frontend (React)**: User interfaces for login, signup, the ingestion dashboard, and the chat UI.
+- **Backend (FastAPI)**: REST endpoints covering `/auth`, `/ingest`, and `/query`.
+- **MongoDB**: Primary database for saving user profiles, repository tracking statuses, and chat history.
+- **FAISS (Vector Database)**: Stores document embeddings (numerical representations of code/text) allowing for lightning-fast semantic similarity searches.
+- **Sentence-Transformers**: The machine learning model (HuggingFace's `all-MiniLM-L6-v2`) used to create embeddings for raw text.
+- **Groq API (LLM)**: Uses the `llama-3.3-70b-versatile` model to read the retrieved context from FAISS and answer the user's questions in natural language.
+
+3. DATA FLOW & ASCII FLOW CHART
+-------------------------------
+
+There are two primary pipelines in this application: the "Ingestion Flow" (when a user adds a new GitHub repository) and the "Query Flow" (when a user asks a question in the chat).
+
+[ A. REPOSITORY INGESTION FLOW ]
+--------------------------------
+
+When the user enters a GitHub URL on the dashboard, the backend needs to download the code, break it into smaller pieces, convert those pieces to numbers (embeddings), and store them.
+
+  +-------------+       (POST /api/v1/ingest/ingest_repo)
+  |  Frontend   |-------------------------------------------+
+  | (Dashboard) |                                           |
+  +-------------+                                           v
+                                                 +--------------------+
+                                                 | Ingestion Endpoint | (FastAPI)
+                                                 +--------------------+
+                                                            |
+                                               (Spawns BackgroundTask)
+                                                            v
+                                                 +--------------------+
+                              +----------------->| Ingestion Service  |
+                              |                  +--------------------+
+                              |                             |
+                              |    1. Clone Repo via Git    v
+                              |    2. Read files      +-------------+
+                         (Updates)                    | Raw Text    |
+                              |                       +-------------+
+                              |                             |
+                              |    3. Split into chunks     v
+                       +-------------+                +-------------+
+                       |   MongoDB   |                | Chunker     | (e.g. 500 chars each)
+                       | (Tracking   |                +-------------+
+                       |  Status)    |                      |
+                       +-------------+         4. Generate Embeddings (SentenceTransformers)
+                                                            v
+                                                      +-------------+
+                                                      | Embeddings  | (Arrays of floats)
+                                                      +-------------+
+                                                            |
+                                       5. Save vectors & metadata to FAISS
+                                                            v
+                                                      +-------------+
+                                                      |  FAISS DB   | (Vector Repo)
+                                                      +-------------+
+
+
+[ B. USER QUERY FLOW ]
+----------------------
+
+When a user asks "How does the authentication work in this repo?", the backend converts the question into an embedding, finds the most similar code chunks in FAISS, and sends them to the LLM to answer the question.
+
+  +-------------+          (POST /api/v1/query/)
+  |  Frontend   |-------------------------------------------+
+  |   (Chat)    |                                           |
+  +-------------+                                           v
+                                                 +--------------------+
+                                                 |   Query Endpoint   | (FastAPI)
+                                                 +--------------------+
+                                                            |
+                                        1. Check Redis Cache (Bypassed if down)
+                                                            v
+                                                 +--------------------+
+                                                 |   Query Service    |
+                                                 +--------------------+
+                                                            |
+                                   2. Convert user question to embedding
+                                                            |
+                                                            v
+                                                 +--------------------+
+                                                 | SentenceTransform  |
+                                                 +--------------------+
+                                                            |
+                                       3. Search for top-K similar chunks
+                                                            v
+                                                 +--------------------+
+                                                 |      FAISS DB      |
+                                                 +--------------------+
+                                                            |
+                                       4. Return top matching code snippets
+                                                            v
+                                                 +--------------------+
+                                                 | Context Assembler  |
+                                                 +--------------------+
+                                                            |
+                                       5. Send Question + Context to Groq LLM
+                                                            v
+                                                 +--------------------+
+                                                 |      Groq API      |<-- (llama-3.3-70b-versatile)
+                                                 +--------------------+
+                                                            |
+                                      6. Generate final natural language answer
+                                                            v
+                                                 +--------------------+
+                  +------------------------------|   Query Service    |
+                  |                              +--------------------+
+                  |                                         |
+                  v                            7. Save Q&A to MongoDB History
+            +-------------+                                 |
+            |   Frontend  |<--------------------------------+
+            +-------------+          (JSON Response)

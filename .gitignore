@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Node
+node_modules/
+dist/
+build/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Project specific
+api key.txt
+db_out.txt
+faiss_index.bin
+faiss_metadata.pkl
+temp_repos/
+backend/.env
