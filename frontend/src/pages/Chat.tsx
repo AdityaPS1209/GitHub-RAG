@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import api from '../lib/api';
 import type { QueryResponse, SourceDocument } from '../types';
 import { Send, Bot, User, Code, FileText, Loader2 } from 'lucide-react';
@@ -12,9 +14,22 @@ interface Message {
 
 export default function Chat() {
     const [query, setQuery] = useState('');
-    const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: "Hello! I'm your AI coding assistant. I can answer questions about the repositories you've indexed on the dashboard." }
-    ]);
+    const [messages, setMessages] = useState<Message[]>(() => {
+        const savedMessages = localStorage.getItem('chatMessages');
+        if (savedMessages) {
+            try {
+                return JSON.parse(savedMessages);
+            } catch (e) {
+                console.error("Failed to parse chat messages", e);
+            }
+        }
+        return [{ role: 'assistant', content: "Hello! I'm your AI coding assistant. I can answer questions about the repositories you've indexed on the dashboard." }];
+    });
+    
+    useEffect(() => {
+        localStorage.setItem('chatMessages', JSON.stringify(messages));
+    }, [messages]);
+
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +104,15 @@ export default function Chat() {
                                 lineHeight: 1.6,
                                 boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
                             }}>
-                                {msg.content}
+                                {msg.role === 'assistant' ? (
+                                    <div className="markdown-body">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.content}
+                                        </ReactMarkdown>
+                                    </div>
+                                ) : (
+                                    msg.content
+                                )}
                             </div>
 
                             {/* Sources */}
